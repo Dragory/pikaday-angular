@@ -17,6 +17,7 @@ module.exports = function(config) {
     files: [
       'node_modules/angular/angular.js',
       'node_modules/angular-mocks/angular-mocks.js',
+      'node_modules/pikaday/node_modules/moment/moment.js',
       'node_modules/pikaday/pikaday.js',
       'pikaday-angular.js',
       'test/*_test.js'

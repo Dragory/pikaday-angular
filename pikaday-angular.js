@@ -27,15 +27,22 @@
         config = configs;
       };
     })
-    .directive('pikaday', ['pikadayConfig', pikadayDirectiveFn]);
+    .directive('pikaday', ['pikadayConfig', '$timeout', pikadayDirectiveFn]);
 
-  function pikadayDirectiveFn(pikadayConfig) {
+  function pikadayDirectiveFn(pikadayConfig, $timeout) {
 
     return {
 
       restrict: 'A',
       scope: {
-        pikaday: '=', onSelect: '&', onOpen: '&', onClose: '&', onDraw: '&', disableDayFn: '&'
+        model: '=pikaday',
+        modelFormat: '@?',
+        onSelect: '&',
+        onOpen: '&',
+        onClose: '&',
+        onDraw: '&',
+        disableDayFn: '&',
+        pickerObject: '=?'
       },
       link: function (scope, elem, attrs) {
 
@@ -82,7 +89,6 @@
 
             // Functions
 
-            case "onSelect":
             case "onOpen":
             case "onClose":
             case "onDraw":
@@ -99,10 +105,11 @@
             // Strings
 
             case "format":
+            case "viewFormat":
             case "position":
             case "theme":
             case "yearSuffix":
-
+              if (attr === 'viewFormat') attr = 'format';
               config[attr] = value;
               break;
 
@@ -132,13 +139,43 @@
           }
         }
 
-        // instantiate pikaday with config, bind to scope, add destroy event callback
+        function getModelFormat() {
+          return scope.modelFormat || attrs.viewFormat || attrs.format;
+        }
 
-        var picker = new Pikaday(config);
-        scope.pikaday = picker;
+        // instantiate pikaday with config, bind to scope, add destroy event callback
+        var picker;
+
+        config.onSelect = function(date) {
+          scope.$apply(function() {
+            // First update the model value
+            scope.model = picker.getMoment().format(getModelFormat());
+
+            // And after Angular has had time to apply the model value to the original source as well,
+            // run the onSelect handlers.
+            $timeout(function() {
+              if (attrs.onSelect) {
+                scope.onSelect({pikaday: picker, date: date});
+              }
+            });
+          });
+        };
+
+        picker = new Pikaday(config);
+
+        watcher = scope.$watch('model', function(newVal) {
+          if (! newVal) return;
+          picker.setMoment(moment(newVal, getModelFormat()), true);
+        });
+
         scope.$on('$destroy', function () {
+          watcher();
           picker.destroy();
         });
+
+        if (scope.pickerObject) {
+          scope.pickerObject = picker;
+        }
       }
     };
   }

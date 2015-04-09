@@ -6,16 +6,22 @@ describe('directive: pikaday', function() {
 
   describe('inline', function() {
 
-    var element, scope;
+    var element, scope, rootScope, timeout;
 
-    beforeEach(inject(function($rootScope, $compile) {
+    beforeEach(inject(function($rootScope, $compile, $timeout) {
 
       /*jshint multistr: true */
 
+      rootScope = $rootScope;
+      timeout = $timeout;
+
       scope    = $rootScope.$new();
+      scope.myPickerValue = "2.6.1998";
+      scope.myPickerObject = {};
+
       element  = angular.element('<div id="trigger"> \
                   <div id="container"> \
-                  <input pikaday="myPickerObject" \
+                  <input pikaday="myPickerValue" \
                   set-default-date="true" \
                   bound="false" \
                   reposition="true" \
@@ -27,20 +33,22 @@ describe('directive: pikaday', function() {
                   year-range="[1997, 2003]" \
                   number-of-months="3" \
                   main-calendar="2" \
-                  format="MM-DD-YYYY" \
+                  format="YYYY-MM-DD" \
                   position="top right" \
                   theme="custom-theme"\
                   year-suffix="suff" \
-                  min-date="01/06/1998" \
-                  max-date="01/06/2007" \
-                  default-date="01/09/1998" \
+                  min-date="1998-06-01" \
+                  max-date="2007-08-01" \
+                  default-date="1998-09-01" \
                   trigger="trigger" \
                   container="container" \
                   on-select="sample.onPikadaySelect(pikaday)" \
                   on-open="sample.onPikadayOpen(pikaday)" \
                   on-close="sample.onPikadayClose(pikaday)" \
                   on-draw="sample.onPikadayDraw(pikaday)" \
-                  disable-day-fn="sample.onPikadayDisableDayFunction(pikaday)">');
+                  disable-day-fn="sample.onPikadayDisableDayFunction(pikaday)" \
+                  picker-object="myPickerObject" \
+                  model-format="D.M.YYYY">');
 
       compiled = $compile(element)(scope);
       scope.$digest();
@@ -94,7 +102,7 @@ describe('directive: pikaday', function() {
       });
 
       it("should apply format", function() {
-        assert.deepEqual(scope.myPickerObject._o.format, "MM-DD-YYYY");
+        assert.deepEqual(scope.myPickerObject._o.format, "YYYY-MM-DD");
       });
 
       it("should apply position ", function() {
@@ -110,15 +118,15 @@ describe('directive: pikaday', function() {
       });
 
       it("should apply min-date ", function() {
-        assert.deepEqual(scope.myPickerObject._o.minDate.getTime(), 884044800000);
+        assert.deepEqual(scope.myPickerObject._o.minDate.getTime(), moment('1998-06-01').valueOf());
       });
 
       it("should apply max-date ", function() {
-        assert.deepEqual(scope.myPickerObject._o.maxDate.getTime(), 1168041600000);
+        assert.deepEqual(scope.myPickerObject._o.maxDate.getTime(), moment('2007-08-01').valueOf());
       });
 
       it("should apply default-date ", function() {
-        assert.deepEqual(scope.myPickerObject._o.defaultDate.getTime(), 884304000000);
+        assert.deepEqual(scope.myPickerObject._o.defaultDate.getTime(), (new Date('1998-09-01')).getTime());
       });
 
       // it("should provide the trigger element", function() {
@@ -147,6 +155,34 @@ describe('directive: pikaday', function() {
 
       it("should bind with disable-day-fn", function() {
         assert.deepEqual(typeof scope.myPickerObject._o.disableDayFn, "function");
+      });
+
+      it("should respect model", function() {
+        assert(scope.myPickerObject.getMoment().isSame(moment('1998-06-02')));
+      });
+
+      it("should respect model format", function(done) {
+          // Has to be before the timeout below because pikaday-angular's onSelect
+          // has a timeout in itself, which would be otherwise queued after the one below.
+          scope.myPickerObject.setMoment(moment('2000-04-03'));
+
+          setTimeout(function() {
+            assert.equal(scope.myPickerValue, '3.4.2000');
+            done();
+          });
+
+          scope.$digest();
+      });
+
+      it("should update on model update", function(done) {
+          scope.myPickerValue = '7.5.2001';
+
+          setTimeout(function() {
+            assert.equal(scope.myPickerObject.getMoment().format('YYYY-MM-DD'), '2001-05-07');
+            done();
+          });
+
+          scope.$digest();
       });
     });
 
